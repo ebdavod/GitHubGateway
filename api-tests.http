@@ -1,0 +1,88 @@
+# GitHub Gateway — example .http file
+# Use with the REST Client extension for VS Code (humao.rest-client) or similar.
+
+@baseUrl = http://localhost:5000
+@owner = octocat
+@repo = Hello-World
+@branch = master
+@apiKey = your-optional-api-key
+
+### Liveness probe
+GET {{baseUrl}}/api/health/live
+
+### Readiness probe (checks GitHub PAT validity)
+GET {{baseUrl}}/api/health/ready
+
+### Connection info
+GET {{baseUrl}}/api/info
+
+### List all branches
+GET {{baseUrl}}/api/v1/repos/{{owner}}/{{repo}}/branches
+X-API-Key: {{apiKey}}
+
+### List contents of the repository root
+GET {{baseUrl}}/api/v1/repos/{{owner}}/{{repo}}/contents?branch={{branch}}
+X-API-Key: {{apiKey}}
+
+### List contents of a specific sub-directory
+GET {{baseUrl}}/api/v1/repos/{{owner}}/{{repo}}/contents/src?branch={{branch}}
+X-API-Key: {{apiKey}}
+
+### Fetch a single file (raw content + metadata)
+GET {{baseUrl}}/api/v1/repos/{{owner}}/{{repo}}/file/README?branch={{branch}}
+X-API-Key: {{apiKey}}
+
+### List recent commits (optionally filtered by path)
+GET {{baseUrl}}/api/v1/repos/{{owner}}/{{repo}}/commits?branch={{branch}}&maxCount=10
+X-API-Key: {{apiKey}}
+
+### Create a new branch from an existing one
+POST {{baseUrl}}/api/v1/repos/{{owner}}/{{repo}}/branches
+X-API-Key: {{apiKey}}
+Content-Type: application/json
+
+{
+  "newBranchName": "feature/from-gateway",
+  "fromBranch": "{{branch}}"
+}
+
+### Create / update a file
+# NOTE: for updates, the current SHA must be supplied. Fetch the file first to obtain it.
+PUT {{baseUrl}}/api/v1/repos/{{owner}}/{{repo}}/contents/test.txt
+X-API-Key: {{apiKey}}
+Content-Type: application/json
+
+{
+  "branch": "{{branch}}",
+  "content": "Hello from GitHub Gateway!\n",
+  "commitMessage": "Create test.txt via gateway",
+  "sha": null
+}
+
+### Delete a file (requires its current SHA)
+DELETE {{baseUrl}}/api/v1/repos/{{owner}}/{{repo}}/contents/test.txt?branch={{branch}}&sha=REPLACE_WITH_SHA&commitMessage=Delete%20via%20gateway
+X-API-Key: {{apiKey}}
+
+### Create a Pull Request
+POST {{baseUrl}}/api/v1/repos/{{owner}}/{{repo}}/pulls
+X-API-Key: {{apiKey}}
+Content-Type: application/json
+
+{
+  "title": "PR from gateway",
+  "head": "feature/from-gateway",
+  "base": "{{branch}}",
+  "body": "Created automatically by the GitHub Gateway.",
+  "draft": false
+}
+
+### Apply a unified git patch
+POST {{baseUrl}}/api/v1/repos/{{owner}}/{{repo}}/patch
+X-API-Key: {{apiKey}}
+Content-Type: application/json
+
+{
+  "branch": "{{branch}}",
+  "commitMessage": "Apply patch via gateway",
+  "patchText": "diff --git a/hello.txt b/hello.txt\nnew file mode 100644\n--- /dev/null\n+++ b/hello.txt\n@@ -0,0 +1 @@\n+hello world\n"
+}
