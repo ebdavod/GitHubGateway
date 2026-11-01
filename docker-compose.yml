@@ -1,0 +1,42 @@
+version: "3.9"
+
+services:
+  github-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: github-gateway
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      # Option 1: pass the PAT via environment variable (recommended)
+      # The container will pick this up at runtime
+      - GitHub__Token=${GITHUB_TOKEN:-}
+      # Override any other setting via double-underscore notation
+      - IpWhitelist__Enabled=${IPWHITELIST_ENABLED:-true}
+      - IpWhitelist__AllowLocalhost=${IPWHITELIST_ALLOWLOCALHOST:-false}
+      # Add networks like this (array index notation)
+      # - IpWhitelist__Networks__0=10.0.0.0/8
+      # - IpWhitelist__Networks__1=203.0.113.5
+      - RateLimiting__PerIpLimit=${RATELIMIT_PERIP:-100}
+      - RateLimiting__WindowSeconds=${RATELIMIT_WINDOW:-60}
+      - Audit__Enabled=${AUDIT_ENABLED:-true}
+    volumes:
+      # Persist audit & application logs to the host
+      - ./logs:/app/logs
+      # Optionally mount a custom appsettings.json
+      # - ./appsettings.Production.json:/app/appsettings.Production.json:ro
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8080/api/health/live"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    # If running behind a reverse proxy, also keep these labels for Traefik:
+    # labels:
+    #   - "traefik.enable=true"
+    #   - "traefik.http.routers.github-gateway.rule=Host(`gateway.example.com`)"
+    #   - "traefik.http.services.github-gateway.loadbalancer.server.port=8080"
